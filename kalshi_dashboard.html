@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edge Desk — Kalshi Paper Ledger</title>
+<style>
+  :root{
+    --bg:#0e1621;
+    --panel:#152232;
+    --panel-2:#1b2b3d;
+    --line:#25384f;
+    --ink:#e8eef6;
+    --ink-dim:#8ea3bd;
+    --ink-faint:#5b708c;
+    --up:#31c48d;
+    --up-soft:#1c3b34;
+    --down:#f6685e;
+    --down-soft:#3a2320;
+    --amber:#e6b450;
+    --accent:#5aa9ff;
+    --mono:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:radial-gradient(1200px 600px at 78% -10%, #1a2c40 0%, transparent 55%),var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5;min-height:100vh;padding:clamp(14px,3vw,32px);letter-spacing:-.005em}
+  .wrap{max-width:1180px;margin:0 auto}
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:22px}
+  .brand{display:flex;flex-direction:column;gap:2px}
+  .brand .kick{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--ink-faint)}
+  .brand h1{font-size:clamp(22px,3.4vw,30px);font-weight:650;letter-spacing:-.02em}
+  .brand h1 b{color:var(--accent);font-weight:650}
+  .status-pill{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink-dim)}
+  .status-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-faint)}
+  .status-pill.live .dot{background:var(--up);box-shadow:0 0 0 0 rgba(49,196,141,.5);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(49,196,141,.45)}70%{box-shadow:0 0 0 7px rgba(49,196,141,0)}100%{box-shadow:0 0 0 0 rgba(49,196,141,0)}}
+  .loader{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:22px}
+  .loader summary{cursor:pointer;font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);list-style:none;display:flex;align-items:center;gap:10px}
+  .loader summary::-webkit-details-marker{display:none}
+  .loader summary::before{content:"▸";color:var(--accent);transition:transform .2s}
+  .loader[open] summary::before{transform:rotate(90deg)}
+  .loader .body{margin-top:14px}
+  .loader p{font-size:13px;color:var(--ink-dim);margin-bottom:10px}
+  .loader code{font-family:var(--mono);color:var(--accent);font-size:12px}
+  textarea{width:100%;min-height:120px;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:12px;line-height:1.6}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  .loader .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  button{font-family:var(--sans);font-size:13px;font-weight:550;padding:9px 16px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);cursor:pointer;transition:.15s}
+  button:hover{border-color:var(--accent);color:#fff}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#06121f}
+  button.primary:hover{background:#7bbcff}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .err{color:var(--down);font-family:var(--mono);font-size:12px;margin-top:8px;min-height:16px}
+  .banner{background:linear-gradient(180deg,var(--panel) 0%,#111d2b 100%);border:1px solid var(--line);border-radius:16px;padding:clamp(18px,3vw,26px);margin-bottom:20px;position:relative;overflow:hidden}
+  .banner .row{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+  .bignum{display:flex;flex-direction:column;gap:4px}
+  .bignum .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint)}
+  .bignum .val{font-family:var(--mono);font-size:clamp(34px,6vw,52px);font-weight:600;letter-spacing:-.02em;line-height:1}
+  .bignum .sub{font-family:var(--mono);font-size:12px;color:var(--ink-dim)}
+  .val.up{color:var(--up)}.val.down{color:var(--down)}
+  .spark{width:100%;height:96px;margin-top:18px;display:block}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .stat .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:9px}
+  .stat .val{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:-.01em}
+  .stat .note{font-size:12px;color:var(--ink-dim);margin-top:5px}
+  .stat .bar{height:5px;border-radius:3px;background:var(--panel-2);margin-top:11px;overflow:hidden}
+  .stat .bar span{display:block;height:100%;border-radius:3px}
+  .killswitch{display:flex;align-items:center;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:20px}
+  .breaker{flex-shrink:0;width:54px;height:54px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--panel-2);position:relative}
+  .breaker svg{width:26px;height:26px}
+  .killswitch.ok .breaker{border-color:var(--up);background:var(--up-soft)}
+  .killswitch.ok .breaker svg{color:var(--up)}
+  .killswitch.tripped .breaker{border-color:var(--down);background:var(--down-soft)}
+  .killswitch.tripped .breaker svg{color:var(--down)}
+  .killswitch.dormant .breaker{border-color:var(--ink-faint)}
+  .killswitch.dormant .breaker svg{color:var(--ink-faint)}
+  .ks-text .t{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+  .killswitch.ok .ks-text .t{color:var(--up)}
+  .killswitch.tripped .ks-text .t{color:var(--down)}
+  .killswitch.dormant .ks-text .t{color:var(--ink-dim)}
+  .ks-text .d{font-size:13px;color:var(--ink-dim)}
+  .cols{display:grid;grid-template-columns:1fr;gap:18px}
+  @media(min-width:900px){.cols{grid-template-columns:1fr 1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .panel h2{font-size:13px;font-weight:600;letter-spacing:.02em;padding:15px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .panel h2 .count{font-family:var(--mono);font-size:11px;color:var(--ink-faint);font-weight:500}
+  .scroll{max-height:360px;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);text-align:right;padding:9px 12px;position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);font-weight:500}
+  th:first-child,td:first-child{text-align:left}
+  td{padding:10px 12px;border-bottom:1px solid rgba(37,56,79,.5);font-family:var(--mono);text-align:right}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--panel-2)}
+  .team{font-family:var(--sans);color:var(--ink);font-weight:500;text-align:left}
+  .team small{display:block;color:var(--ink-faint);font-weight:400;font-size:11px;font-family:var(--mono)}
+  .pos{color:var(--up)}.neg{color:var(--down)}
+  .tag{display:inline-block;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:5px;letter-spacing:.05em}
+  .tag.win{background:var(--up-soft);color:var(--up)}
+  .tag.loss{background:var(--down-soft);color:var(--down)}
+  .empty{padding:40px 18px;text-align:center;color:var(--ink-faint);font-size:13px}
+  .empty .big{font-family:var(--mono);font-size:13px;color:var(--ink-dim);margin-bottom:6px}
+  footer{margin-top:24px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-faint);letter-spacing:.05em}
+  footer b{color:var(--ink-dim);font-weight:500}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <span class="kick">Kalshi × Sharp-Book Consensus</span>
+      <h1>Edge&nbsp;Desk <b>/</b> Paper Ledger</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button id="refreshBtn" title="Reload from server" hidden>↻ Refresh</button>
+      <span class="status-pill" id="statusPill"><span class="dot"></span><span id="statusTxt">Connecting…</span></span>
+    </div>
+  </header>
+
+  <details class="loader" id="loader" open>
+    <summary>Load ledger data</summary>
+    <div class="body">
+      <p>Paste the contents of <code>clv_log.jsonl</code> from the repo (open the raw file on GitHub, select all, paste here). Nothing leaves this page — parsing happens in your browser.</p>
+      <textarea id="input" placeholder='{"type":"alert","market_ticker":"KXMLBGAME-...","sport":"MLB","team":"...","kalshi_price":0.52,"result":"win","pnl":8.40,...}'></textarea>
+      <div class="actions">
+        <button class="primary" id="renderBtn">Render dashboard</button>
+        <button id="sampleBtn">Load sample data</button>
+        <button id="clearBtn">Clear</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+  </details>
+
+  <main id="dash" hidden>
+    <section class="banner">
+      <div class="row">
+        <div class="bignum">
+          <span class="lbl">Paper Balance</span>
+          <span class="val" id="balVal">—</span>
+          <span class="sub" id="balSub"></span>
+        </div>
+        <div class="bignum" style="text-align:right">
+          <span class="lbl">Return on Stake</span>
+          <span class="val" id="roiVal" style="font-size:clamp(26px,4vw,36px)">—</span>
+          <span class="sub" id="roiSub"></span>
+        </div>
+      </div>
+      <svg class="spark" id="spark" preserveAspectRatio="none"></svg>
+    </section>
+
+    <div class="killswitch dormant" id="ks">
+      <div class="breaker">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line>
+        </svg>
+      </div>
+      <div class="ks-text">
+        <div class="t" id="ksTitle">Kill switch — dormant</div>
+        <div class="d" id="ksDesc">Waiting for settled bets.</div>
+      </div>
+    </div>
+
+    <section class="grid" id="grid"></section>
+
+    <section class="cols">
+      <div class="panel">
+        <h2>Open positions <span class="count" id="openCount">0</span></h2>
+        <div class="scroll" id="openWrap"></div>
+      </div>
+      <div class="panel">
+        <h2>Settled — most recent <span class="count" id="setCount">0</span></h2>
+        <div class="scroll" id="setWrap"></div>
+      </div>
+    </section>
+
+    <div class="panel" id="calibPanel" style="margin-top:18px">
+      <h2>Edge calibration <span class="count">does a bigger flagged edge actually win more?</span></h2>
+      <div class="scroll" id="calibWrap"></div>
+    </div>
+
+    <footer>Paper-only data-collection phase · <b id="fresh"></b> · one game, one row, gated by trust &amp; dedup</footer>
+  </main>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const fmtMoney=(n)=>(n<0?"-$":"$")+Math.abs(n).toFixed(2);
+const fmtPct=(n)=>(n*100).toFixed(1)+"%";
+
+function parseLog(text){
+  const rows=[];
+  const lines=text.split(/\r?\n/);
+  let bad=0;
+  for(const line of lines){
+    const t=line.trim(); if(!t) continue;
+    try{ const o=JSON.parse(t); if(o&&o.type==="alert") rows.push(o); }
+    catch(e){ bad++; }
+  }
+  return {rows,bad};
+}
+
+function computeBreakeven(entries){
+  if(!entries.length) return 0.5375;
+  const avg=entries.reduce((a,b)=>a+b,0)/entries.length;
+  const feePerContract=0.07*avg*(1-avg);
+  return Math.min(1,Math.max(0,avg+feePerContract));
+}
+
+function render(rows){
+  const settled=rows.filter(r=>r.result==="win"||r.result==="loss");
+  const open=rows.filter(r=>!r.result);
+  const wins=settled.filter(r=>r.result==="win").length;
+  const losses=settled.length-wins;
+  const winRate=settled.length?wins/settled.length:0;
+  const pnl=settled.reduce((a,r)=>a+(r.pnl||0),0);
+  const staked=settled.reduce((a,r)=>a+(r.paper_stake||0),0);
+  const roi=staked?pnl/staked:0;
+
+  let bal=0; const series=[];
+  for(const r of rows){
+    if(r.result==="win"||r.result==="loss"){
+      bal = (r.balance_after!=null)? r.balance_after : bal+(r.pnl||0);
+      series.push(bal);
+    }
+  }
+  const finalBal=series.length?series[series.length-1]:0;
+  window._lastSeries=series;
+
+  const bv=$("#balVal"); bv.textContent=fmtMoney(finalBal);
+  bv.className="val "+(finalBal>=0?"up":"down");
+  $("#balSub").textContent=`${settled.length} settled · ${fmtMoney(staked)} staked`;
+  const rv=$("#roiVal"); rv.textContent=(roi>=0?"+":"")+fmtPct(roi);
+  rv.className="val "+(roi>=0?"up":"down");
+  $("#roiSub").textContent=`${wins}W · ${losses}L`;
+  drawSpark(series);
+
+  const WINDOW=50;
+  const recent=settled.slice(-WINDOW);
+  const be=computeBreakeven(recent.map(r=>r.kalshi_price).filter(Boolean));
+  const ks=$("#ks");
+  ks.className="killswitch";
+  if(recent.length<WINDOW){
+    ks.classList.add("dormant");
+    $("#ksTitle").textContent="Kill switch — dormant";
+    $("#ksDesc").textContent=`${recent.length}/${WINDOW} settled bets in window.`;
+  } else {
+    const rwr=recent.filter(r=>r.result==="win").length/recent.length;
+    if(rwr<=be){
+      ks.classList.add("tripped");
+      $("#ksTitle").textContent="Kill switch — TRIPPED";
+      $("#ksDesc").textContent=`Recent win rate ${fmtPct(rwr)} ≤ breakeven ${fmtPct(be)}.`;
+    } else {
+      ks.classList.add("ok");
+      $("#ksTitle").textContent="Kill switch — healthy";
+      $("#ksDesc").textContent=`Recent win rate ${fmtPct(rwr)} > breakeven ${fmtPct(be)}.`;
+    }
+  }
+
+  const clvRows=settled.filter(r=>typeof r.clv_points==="number");
+  const meanClv=clvRows.length? clvRows.reduce((a,r)=>a+r.clv_points,0)/clvRows.length : null;
+  const grid=$("#grid");
+  grid.innerHTML="";
+  const cards=[
+    {lbl:"Win rate", val:fmtPct(winRate), cls:winRate>=0.5?"up":"down", note:`${wins}W ${losses}L`},
+    {lbl:"P&L", val:fmtMoney(pnl), cls:pnl>=0?"up":"down", note:`on ${fmtMoney(staked)}`},
+    {lbl:"ROI", val:fmtPct(roi), cls:roi>=0?"up":"down", note:`${open.length} open`},
+    {lbl:"Mean CLV", val:meanClv==null?"—":meanClv.toFixed(2)+"pt", cls:meanClv==null?"":meanClv>0?"up":"down", note:"points vs close"},
+  ];
+  for(const c of cards){
+    const el=document.createElement("div");
+    el.className="stat";
+    el.innerHTML=`<div class="lbl">${c.lbl}</div><div class="val ${c.cls==='up'?'pos':c.cls==='down'?'neg':''}">${c.val}</div><div class="note">${c.note}</div>`;
+    grid.appendChild(el);
+  }
+
+  $("#openCount").textContent=open.length;
+  const ow=$("#openWrap");
+  if(!open.length){
+    ow.innerHTML=`<div class="empty"><div class="big">No open positions</div></div>`;
+  } else {
+    ow.innerHTML=table(["Side","Sport","Entry","Edge"],open.map(r=>`<tr><td class="team">${r.team||"—"}</td><td>${r.sport||""}</td><td>${r.kalshi_price!=null?(r.kalshi_price*100).toFixed(0)+"¢":"—"}</td><td>${r.net_edge_points!=null?"+"+r.net_edge_points.toFixed(1):"—"}</td></tr>`).join(""));
+  }
+
+  $("#setCount").textContent=settled.length;
+  const sw=$("#setWrap");
+  if(!settled.length){
+    sw.innerHTML=`<div class="empty"><div class="big">No settled bets yet</div></div>`;
+  } else {
+    sw.innerHTML=table(["Side","Result","P&L"],settled.slice().reverse().slice(0,30).map(r=>{
+      const pnl=r.pnl||0;
+      return `<tr><td class="team">${r.team||"—"}</td><td><span class="tag ${r.result==="win"?"win":"loss"}">${r.result}</span></td><td class="${pnl>=0?'pos':'neg'}">${(pnl>=0?"+":"")+(pnl).toFixed(2)}</td></tr>`;
+    }).join(""));
+  }
+
+  $("#fresh").textContent="rendered "+new Date().toLocaleString();
+  $("#statusPill").className="status-pill live";
+  $("#statusTxt").textContent=`${rows.length} rows`;
+  $("#dash").hidden=false;
+  $("#loader").open=false;
+}
+
+function table(heads,body){
+  return `<table><thead><tr>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function drawSpark(series){
+  const svg=$("#spark");
+  const W=svg.clientWidth||900, H=96, pad=6;
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  if(series.length<2){ svg.innerHTML=""; return; }
+  const data=[0,...series];
+  const min=Math.min(...data,0), max=Math.max(...data,0);
+  const rng=(max-min)||1;
+  const x=i=>pad+i*(W-2*pad)/(data.length-1);
+  const y=v=>H-pad-(v-min)/rng*(H-2*pad);
+  let d="M"+x(0)+" "+y(data[0]);
+  for(let i=1;i<data.length;i++) d+=" L"+x(i)+" "+y(data[i]);
+  const col=series[series.length-1]>=0?"#31c48d":"#f6685e";
+  const area=d+` L${x(data.length-1)} ${H-pad} L${x(0)} ${H-pad} Z`;
+  svg.innerHTML=`<defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.28"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#g)"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(data.length-1)}" cy="${y(data[data.length-1])}" r="3.5" fill="${col}"/>`;
+}
+
+async function loadLive(){
+  try{
+    const res=await fetch("/api/ledger",{cache:"no-store"});
+    if(!res.ok) throw new Error();
+    const data=await res.json();
+    render(data.rows||[]);
+    $("#refreshBtn").hidden=false;
+  }catch(e){
+    $("#statusPill").className="status-pill";
+    $("#statusTxt").textContent="Paste-in mode";
+  }
+}
+
+$("#renderBtn").addEventListener("click",()=>{
+  const {rows,bad}=parseLog($("#input").value);
+  if(!rows.length){$("#err").textContent="No valid rows found"; return;}
+  render(rows);
+});
+$("#clearBtn").addEventListener("click",()=>{$("#input").value="";});
+$("#sampleBtn").addEventListener("click",()=>{$("#input").value='{"type":"alert","sport":"MLB","team":"Test","kalshi_price":0.5,"result":"win","pnl":10,"balance_after":10}';$("#renderBtn").click();});
+$("#refreshBtn").addEventListener("click",()=>loadLive());
+window.addEventListener("resize",()=>{if(!$("#dash").hidden && window._lastSeries) drawSpark(window._lastSeries);});
+
+loadLive();
+</script>
+</body>
+</html>
